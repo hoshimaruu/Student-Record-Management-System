@@ -94,6 +94,24 @@ class Student : public Grade {
         Student(const std::string& n, const std::string& id, const std::vector<double>& g) 
             : Grade(g), name(n), studentID(id) {};
 
+        // ------------ Search ID using binary search -------------
+        int binarySearch(std::vector<Student> student, double targetID) {
+            int left = 0;
+            int right = student.size() - 1;
+            while (left <= right) {
+                int mid = left + (right - left) / 2;
+
+                for (std::vector<Student>::iterator it = studentRecords.begin(); it != studentRecords.end(); ++it) {
+                    if (it->studentID[mid] == targetID) {
+                        return mid;
+                    } else if (it->studentID[mid] < targetID) {
+                        left = mid + 1;
+                    } else {
+                        right = mid - 1;
+                    }
+                }
+            }
+        }
 
         //------------------------ Create / Remove / Update / Read --------------------------
         void displayStudentInfo() {
@@ -172,7 +190,7 @@ class Student : public Grade {
 
                     // update id
                     std::cout << "Enter new ID (Press enter if you want to skip): ";
-                    
+
                     // update grade per subj
                     std::cout << "Enter new grade for (Press enter if you want to skip): ";
                     for (int i = 0; i < studentRecords.size(); ++i) {
