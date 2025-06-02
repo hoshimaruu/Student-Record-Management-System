@@ -3,7 +3,6 @@
 
     1. Create Data Structures:
         - Use vector to store student records dynamically. <vector>----------------------- implement vector (STL) /
-        - Use stack to track recent actions for undo functionality. ---------------------- implement stack (no STL) 
         - Use queue to manage enrollment requests in order. ------------------------------ implement queue (no STL)
 
     2. Implement Sorting:
@@ -12,7 +11,6 @@
 
     3. Implement Searching:
         - Write linear search to find a student in unsorted records. ---------------------- implement linear search
-        - Write binary search to find a student in sorted records. ------------------------ implement binary search (no STL)
 
     4. Add CRUD Operations:
         - Add new student records.
@@ -41,6 +39,8 @@
 
 #include <iostream>
 #include <vector>
+#include <algorithm> // for text
+#include <cctype> // for std::tolower
 
 class Grade {
     protected:
@@ -50,7 +50,7 @@ class Grade {
         Grade(const std::vector<double>& g) : gradeValue(g) {};
         double getTotal() {
             double total = 0.0;
-            for (int grades : gradeValue) {
+            for (double grades : gradeValue) {
                 total += grades;
             }
             return total;
@@ -95,29 +95,31 @@ class Student : public Grade {
             : Grade(g), name(n), studentID(id) {};
 
         // ------------ Search ID using binary search -------------
-        int binarySearch(std::vector<Student> student, double targetID) {
+        int binarySearch(std::vector<Student> student, const std::string& targetID) {
             int left = 0;
             int right = student.size() - 1;
             while (left <= right) {
                 int mid = left + (right - left) / 2;
 
-                for (std::vector<Student>::iterator it = studentRecords.begin(); it != studentRecords.end(); ++it) {
-                    if (it->studentID[mid] == targetID) {
-                        return mid;
-                    } else if (it->studentID[mid] < targetID) {
-                        left = mid + 1;
-                    } else {
-                        right = mid - 1;
-                    }
+                if (student[mid].studentID == targetID) {
+                    return mid;
+                } else if (student[mid].studentID < targetID) {
+                    left = mid + 1;
+                } else {
+                    right = mid - 1;
                 }
             }
+            return -1;
         }
 
         //------------------------ Create / Remove / Update / Read --------------------------
         void displayStudentInfo() {
-            std::cout << "Student Name: " << name << std::endl;
-            std::cout << "Student ID: " << studentID << std::endl;
-            displayGrade();
+            std::cout << "Students" << std::endl;
+            for (const auto& student : studentRecords) {
+                std::cout << "\t|-Student Name: " << student.name << std::endl;
+                std::cout << "\t|-Student ID: " << student.studentID << std::endl;
+                displayGrade();
+            }
         }
 
         void pushStudent() {
@@ -162,14 +164,17 @@ class Student : public Grade {
             for (std::vector<Student>::iterator it = studentRecords.begin(); it != studentRecords.end(); ++it) {
                 if (it->studentID == id) {
                     studentRecords.erase(it);
+                    break;
                 }
-                break;
             }
         }
 
         void updateStudentInfo(const std::string& id) {
-            for (std::vector<Student>::iterator it = studentRecords.begin(); it != studentRecords.end(); ++it){
-                if (it->studentID == id) {
+            int idx = binarySearch(studentRecords, id);
+
+
+            for (size_t i = 0; i < studentRecords.size(); ++i) {
+                if (static_cast<int>(i) == idx) {
                     /*
                         update:
                             -name
@@ -184,26 +189,189 @@ class Student : public Grade {
                     //update name
                     std::cout << "Enter new name (Press enter if you want to skip): ";
                     std::getline(std::cin >> std::ws, readName);
-                    if (readName.empty()) {
-                        it->name = name;
+                    if (!readName.empty()) {
+                        studentRecords[i].name = readName;
                     }
 
                     // update id
+                    std::string newID;
                     std::cout << "Enter new ID (Press enter if you want to skip): ";
-
+                    std::getline(std::cin >> std::ws, newID);
+                    if (!newID.empty()) {
+                        studentRecords[i].studentID = newID;
+                    }
+                    
                     // update grade per subj
-                    std::cout << "Enter new grade for (Press enter if you want to skip): ";
-                    for (int i = 0; i < studentRecords.size(); ++i) {
-                        std::cout << "\t|--" << subjectNames[i] << ": ";
-                        std::cin >> readGrade;
-                        if (readGrade == NULL || readGrade <= 0) readGrade = it->gradeValue[i];
+                    std::cout << "Enter new grade for (Press enter if you want to skip): " << std::endl;
+                    for (size_t j = 0; j < subjectNames.size(); ++j) {
+                        std::cout << "\t|--" << subjectNames[j] << ": ";
+                        std::string input;
+                        std::getline(std::cin >> std::ws, input);
+                        if (!input.empty()) {
+                            try {
+                                readGrade = std::stod(input);
+                                if (readGrade >= 0 && readGrade <= 100) {
+                                    studentRecords[i].gradeValue[j] = readGrade;
+                                }
+                            } catch (...) {
+                                // Ignore invalid input
+                            }
+                        }
                     }
                 }
             }
         }
 };
 
+
+class Enroll {
+    protected:
+        int enrollmentID;
+        std::string enrollerName;
+    private:
+        std::vector<Enroll> enrollmentQueue;
+    public:
+        Enroll(const int& eI, const std::string& eN) 
+            : enrollmentID(eI), enrollerName(eN) {};
+
+        void enqueueEnroll() {
+            int id;
+            std::string name;
+            std::cout << "Enter Enrollment ID (5 integers): ";
+            std::cin >> id;
+            if(std::to_string(id).length() != 5) {
+                throw std::out_of_range("Enrollment ID must be exactly 5 characters long!");
+            };
+            std::cout << "Enter Enroller Name: ";
+            std::getline(std::cin >> std::ws, name);
+            if (name.empty()) {
+                throw std::out_of_range("Enroller Name cannot be empty!");
+            }
+            enrollmentQueue.push_back(Enroll(id, name));
+            std::cout << "Enrollment request added successfully!" << std::endl;
+        }
+
+        void dequeueEnroll() {
+            if (!enrollmentQueue.empty()) {
+                enrollmentQueue.erase(enrollmentQueue.begin());
+                std::cout << "Enrollment request processed successfully!" << std::endl;
+            } else {
+                throw std::out_of_range("Enrollment queue is empty!");
+            }
+        }
+
+        void displayEnrollmentQueue() {
+            if (enrollmentQueue.empty()) {
+                std::cout << "Enrollment queue is empty!" << std::endl;
+                return;
+            }
+            std::cout << "Enrollment Queue:" << std::endl;
+            for (const auto& enroll : enrollmentQueue) {
+                for (int i = 0; i < enroll.enrollmentQueue.size(); ++i) {
+                    std::cout << "Index: " << i + 1 << "\n\tEnrollment ID: " 
+                                    << enroll.enrollmentID << "\n\tEnroller Name: " << enroll.enrollerName << std::endl;
+                }
+            }
+        }
+
+        void dequeueAndPushback() {
+            if (!enrollmentQueue.empty()) {
+                Enroll front = enrollmentQueue.front();
+                enrollmentQueue.erase(enrollmentQueue.begin());
+                enrollmentQueue.push_back(front);
+                std::cout << "Moved front enrollment request to the back of the queue." << std::endl;
+                Student pushStudent();
+            } else {
+                throw std::out_of_range("Enrollment queue is empty!");
+            }
+        }
+
+};
+
+bool isInteger(const std::string& str) 
+{
+    try {
+        size_t pos;
+        std::stoi(str, &pos);
+        return pos == str.length();
+    } catch (...) {
+        return false;
+    }
+}
+
 int main() {
+    std::cout << "Student Record Management System" << std::endl;
     
-    return 0;
+
+    while (true) {
+        
+        std::cout << "\n>>> ";
+
+        std::string choice;
+        std::cin >> choice;
+
+        // string commands
+        std::string lowerChoice(choice.size(), '\0');
+        std::transform(choice.begin(), choice.end(), lowerChoice.begin(),
+            [](unsigned char c) { return std::tolower(c); });
+
+        if (lowerChoice == "help") {
+            std::cout << "1. Add Student Record" << std::endl;
+            std::cout << "2. Remove Student Record" << std::endl;
+            std::cout << "3. Update Student Record" << std::endl;
+            std::cout << "4. View Student Records" << std::endl;
+            std::cout << "5. Add Enrollment Request" << std::endl;
+            std::cout << "6. Process Enrollment Request" << std::endl;
+            std::cout << "7. Help" << std::endl;
+            std::cout << "8. Exit" << std::endl;
+            continue; // Skip the rest of the loop
+        } else if (lowerChoice == "exit") {
+            return 0; // exit the program
+        } else if (lowerChoice == "add student") {
+
+        }
+
+        // integer commands
+        switch (isInteger(choice)) {
+            case 1: {
+                Student student("", "", {});
+                student.pushStudent();
+                break;
+            }
+            case 2: {
+                // Implement remove student logic
+                break;
+            }
+            case 3: {
+                // Implement update student logic
+                break;
+            }
+            case 4: {
+                // Implement view student records logic
+                break;
+            }
+            case 5: {
+                Enroll enqueueEnroll();
+                break;
+            }
+            case 6: {
+                Enroll dequeueEnroll();
+                break;
+            }
+            case 7: {
+                std::cout << "1. Add Student Record" << std::endl;
+                std::cout << "2. Remove Student Record" << std::endl;
+                std::cout << "3. Update Student Record" << std::endl;
+                std::cout << "4. View Student Records" << std::endl;
+                std::cout << "5. Add Enrollment Request" << std::endl;
+                std::cout << "6. Process Enrollment Request" << std::endl;
+                std::cout << "7. Help" << std::endl;
+                std::cout << "8. Exit" << std::endl;
+            }
+            case 8:
+                return 0; // Exit the program
+            default:
+                std::cout << "Invalid choice, please try again." << std::endl;
+        }
+    }
 }
